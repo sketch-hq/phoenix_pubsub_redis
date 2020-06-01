@@ -4,6 +4,7 @@ defmodule Phoenix.PubSub.RedisServer do
   use GenServer
   require Logger
 
+  @compression_level 1
   @reconnect_after_ms 5_000
   @redis_msg_vsn 3
 
@@ -14,17 +15,17 @@ defmodule Phoenix.PubSub.RedisServer do
   end
 
   def broadcast(adapter_name, topic, message, dispatcher) do
-    publish(adapter_name, :except, node_name(adapter_name), topic, message, dispatcher)
+    publish(adapter_name, :except, node_name(adapter_name), topic, message, dispatcher, @compression_level)
   end
 
   def direct_broadcast(adapter_name, node_name, topic, message, dispatcher) do
-    publish(adapter_name, :only, node_name, topic, message, dispatcher)
+    publish(adapter_name, :only, node_name, topic, message, dispatcher, @compression_level)
   end
 
-  defp publish(adapter_name, mode, node_name, topic, message, dispatcher) do
+  defp publish(adapter_name, mode, node_name, topic, message, dispatcher, compression_level) do
     namespace = redis_namespace(adapter_name)
     redis_msg = {@redis_msg_vsn, mode, node_name, topic, message, dispatcher}
-    bin_msg = :erlang.term_to_binary(redis_msg)
+    bin_msg = :erlang.term_to_binary(redis_msg, compressed: compression_level)
 
     :poolboy.transaction(adapter_name, fn worker_pid ->
       case Redix.command(worker_pid, ["PUBLISH", namespace, bin_msg]) do
