@@ -63,6 +63,7 @@ defmodule Phoenix.PubSub.Redis do
   def init(opts) do
     pubsub_name = Keyword.fetch!(opts, :name)
     adapter_name = Keyword.fetch!(opts, :adapter_name)
+    compression_level = Keyword.get(opts, :compression_level, 0)
 
     opts = handle_url_opts(opts)
     opts = Keyword.merge(@defaults, opts)
@@ -73,6 +74,7 @@ defmodule Phoenix.PubSub.Redis do
 
     :ets.new(adapter_name, [:public, :named_table, read_concurrency: true])
     :ets.insert(adapter_name, {:node_name, node_name})
+    :ets.insert(adapter_name, {:compression_level, compression_level})
 
     pool_opts = [
       name: {:local, adapter_name},
