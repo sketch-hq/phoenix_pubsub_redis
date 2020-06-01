@@ -8,6 +8,7 @@ defmodule Phoenix.PubSub.RedisServer do
   @reconnect_after_ms 5_000
   @redis_msg_vsn 1
   @redix_opts [:host, :port, :password, :database, :ssl, :socket_opts]
+  @compression_level 1
 
   @doc """
   Starts the server
@@ -28,7 +29,7 @@ defmodule Phoenix.PubSub.RedisServer do
 
   defp do_broadcast(fastlane, pool_name, pool_size, namespace, node_ref, from_pid, topic, msg) do
     redis_msg = {@redis_msg_vsn, node_ref, fastlane, pool_size, from_pid, topic, msg}
-    bin_msg   = :erlang.term_to_binary(redis_msg)
+    bin_msg   = :erlang.term_to_binary(redis_msg, compressed: @compression_level)
 
     :poolboy.transaction pool_name, fn worker_pid ->
       case Redix.command(worker_pid, ["PUBLISH", namespace, bin_msg]) do
